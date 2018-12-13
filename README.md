@@ -6,7 +6,7 @@ File Structure:
 - config.conf (Config file for all attributes)
 - emails.lst (List of receivers of E-mails)
 - ex_message.txt (Message content file)
-- mailhummer.py (Main script)
+- mailhammer.py (Main script)
 
 Скрипт для рассылки почты умеет:
 
