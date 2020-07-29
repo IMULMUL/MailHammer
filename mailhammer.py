@@ -7,12 +7,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import argparse
 import base64
-import ConfigParser
+import configparser
 import os.path
 import re
 import smtplib
 import socket
 import sys
+import io
 
 def get_mail_list_from_file(file):
     try:
@@ -52,10 +53,12 @@ def create_message(message, subject, from_header, attach="", track="", mail=""):
     else:
         msg['From'] = Header(from_header)
 
+    msg['To'] = Header(mail)
     msg['Subject'] = Header(subject, 'utf-8')
 
-    with open(message, 'r') as file:
+    with io.open(message, 'r', encoding='utf8') as file:
         message = file.read()
+
 
     if track:
         track = '<img alt="" src="%s?u=%s" width="1" height="1" border="0" />' % (track, base64.b64encode(mail))
@@ -93,7 +96,7 @@ def main():
         print >> sys.stderr, "[ERROR] Non-existent path to config file."
         exit(1)
 
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(config_path)
 
     try:
@@ -108,7 +111,7 @@ def main():
         attachment  = config.get('Message', 'attachment')
         emails      = get_mail_list_from_file(config.get('Message', 'emails'))
         track       = config.get('Message', 'tracking_handler')
-    except ConfigParser.NoOptionError as e:
+    except configparser.NoOptionError as e:
         print >> sys.stderr, "[ERROR] In config file " + str(e.message)
         exit(1)
 
@@ -126,6 +129,11 @@ def main():
         smtpClient.starttls()
     else:
         smtpClient = smtplib.SMTP(server, port)
+
+    smtpClient.ehlo("npktrans.ru")
+
+    if args.verbose > 1:
+        smtpClient.set_debuglevel(1)
 
     print >> sys.stdout, "[INFO] Here is your configuration:\nServer: %s\nPort: %s\nUsername: %s\n" % (server, port, username)
 
@@ -152,7 +160,7 @@ def main():
             print >> sys.stdout, "[INFO] The first created message body:\n" + message
 
         try:
-            smtpClient.sendmail(username, email, message)
+            smtpClient.sendmail(username, email, message,mail_options=['BODY=8BITMIME', 'SMTPUTF8'])
         except (socket.error, smtplib.SMTPException) as Exception:
             print >> sys.stderr, "[ERROR] Can't send message."
             print >> sys.stderr, Exception
